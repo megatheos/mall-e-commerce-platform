@@ -1,0 +1,25 @@
+# 构建阶段
+FROM maven:3.8.6-openjdk-8 AS builder
+WORKDIR /app
+COPY . .
+RUN mvn clean install -DskipTests
+
+# 运行阶段
+FROM eclipse-temurin:8-jre-alpine
+WORKDIR /app
+
+# 时区设置
+RUN apk add --no-cache tzdata && \
+    cp /usr/share/zoneinfo/Asia/Shanghai /etc/localtime && \
+    echo "Asia/Shanghai" > /etc/timezone
+
+# 复制构建好的 jar 包
+COPY --from=builder /app/mall-search/target/mall-search-1.0-SNAPSHOT.jar app.jar
+
+# 暴露端口
+EXPOSE 8081
+
+# JVM 参数
+ENV JAVA_OPTS="-Xms256m -Xmx512m -Djava.security.egd=file:/dev/./urandom"
+
+ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar /app/app.jar"]
